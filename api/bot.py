@@ -8,8 +8,8 @@ from telegram.ext import (
 )
 import asyncio
 
-TOKEN = os.environ.get("8103528030:AAGE4ex7SrD15eLgdOpi0vgX4UTX-N0tcKQ")
-ADMIN_CHAT_ID = int(os.environ.get("412870818", "123456789"))
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "123456789"))
 
 ASK_NICK, ASK_DISCORD, ASK_SCREEN = range(3)
 
