@@ -14,7 +14,7 @@ import httpx # Рекомендуется для асинхронных HTTP-з�
 # Пример: TELEGRAM_TOKEN, ADMIN_CHAT_ID
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 # chat_id для админа. Убедитесь, что это число.
-ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "123456789")) # Укажите ID админа по умолчанию или оставьте пустым
+ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID")) # Укажите ID админа по умолчанию или оставьте пустым
 WALLET = "TVadXnyCDphgsSZY4p9zs3pgNZYufRwp71" # Адрес вашего кошелька USDT
 
 # Состояния для ConversationHandler
