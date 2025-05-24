@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/bot.py"
+    }
+  ],
+  "functions": {
+    "api/minimal_bot.py": {
+      "runtime": "python3.9" 
+    }
+  }
+}
