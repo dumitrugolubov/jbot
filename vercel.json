@@ -7,7 +7,7 @@
   ],
   "functions": {
     "api/bot.py": {
-      "runtime": "python@3.9" 
+      "runtime": "python@3.10" 
     }
   },
   "build": {
