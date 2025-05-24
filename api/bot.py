@@ -1,8 +1,8 @@
 import os
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
-    Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
+    Application, CommandHandler, MessageHandler, filters, ContextTypes,
+    CallbackQueryHandler, ConversationHandler
 )
 
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -40,9 +40,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     elif query.data == "back":
-        keyboard = [
-            [InlineKeyboardButton("Оплатить", callback_data="pay")]
-        ]
+        keyboard = [[InlineKeyboardButton("Оплатить", callback_data="pay")]]
         text = (
             "Трейдинг — одиночная игра.\n"
             "Но правильное окружение подталкивает к развитию и делает эту игру понятнее.\n\n"
@@ -108,7 +106,7 @@ application.add_handler(CommandHandler("start", start))
 application.add_handler(CallbackQueryHandler(button))
 application.add_handler(conv_handler)
 
-# Vercel serverless function entrypoint
+# Это и есть точка входа для Vercel!
 async def handler(request, context):
     body = await request.json()
     update = Update.de_json(body, application.bot)
