@@ -2,12 +2,18 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/bot.py"
+      "destination": "/api/bot.py" // Убедитесь, что это точный путь к вашему файлу бота
     }
   ],
   "functions": {
-    "api/minimal_bot.py": {
-      "runtime": "python@3.9" 
+    "api/bot.py": { // И здесь тоже, точный путь к вашему файлу бота
+      "runtime": "python@3.9" // ИСПРАВЛЕНИЕ: используйте формат "python@ВЕРСИЯ"
+    }
+  },
+  "build": {
+    "env": {
+      "TELEGRAM_TOKEN": "@telegram_token", // Это пример, используйте ваши фактические имена секретов
+      "ADMIN_CHAT_ID": "@admin_chat_id"   // Эти переменные должны быть настроены в Vercel Dashboard
     }
   }
 }
