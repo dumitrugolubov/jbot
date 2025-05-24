@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove, Bot
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes,
@@ -11,8 +12,15 @@ ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "123456789"))
 ASK_NICK, ASK_DISCORD, ASK_SCREEN = range(3)
 WALLET = "TVadXnyCDphgsSZY4p9zs3pgNZYufRwp71"
 
-# Создаем приложение глобально
-application = Application.builder().token(TOKEN).build()
+# Глобальная переменная для приложения
+app = None
+
+def get_application():
+    global app
+    if app is None:
+        app = Application.builder().token(TOKEN).build()
+        setup_handlers(app)
+    return app
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("Оплатить", callback_data="pay")]]
@@ -32,6 +40,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "pay":
         keyboard = [
+            [InlineKeyboardButton("📋 Копировать адрес", callback_data="copy_wallet")],
             [InlineKeyboardButton("Оплатил", callback_data="paid")],
             [InlineKeyboardButton("Назад", callback_data="back")]
         ]
@@ -44,7 +53,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     
     elif query.data == "copy_wallet":
-        # Отправляем адрес отдельным сообщением для удобного копирования
         await context.bot.send_message(
             chat_id=query.message.chat_id,
             text=f"`{WALLET}`",
@@ -105,57 +113,69 @@ async def ask_screen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, отправьте именно скриншот.")
         return ASK_SCREEN
 
-# ConversationHandler с правильными настройками
-conv_handler = ConversationHandler(
-    entry_points=[
-        CallbackQueryHandler(button, pattern="^paid$")
-    ],
-    states={
-        ASK_NICK: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_nick)],
-        ASK_DISCORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_discord)],
-        ASK_SCREEN: [MessageHandler(filters.PHOTO, ask_screen)]
-    },
-    fallbacks=[CommandHandler('cancel', lambda u, c: ConversationHandler.END)],
-    allow_reentry=True,
-    per_message=False,  # Добавляем явно для избегания warning
-    per_chat=True,
-    per_user=True
-)
+def setup_handlers(application):
+    # ConversationHandler
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(button, pattern="^paid$")
+        ],
+        states={
+            ASK_NICK: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_nick)],
+            ASK_DISCORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_discord)],
+            ASK_SCREEN: [MessageHandler(filters.PHOTO, ask_screen)]
+        },
+        fallbacks=[CommandHandler('cancel', lambda u, c: ConversationHandler.END)],
+        allow_reentry=True,
+        per_message=True,  # Изменено на True
+        per_chat=True,
+        per_user=True
+    )
+    
+    # Добавляем хендлеры
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(conv_handler)
 
-# Добавляем хендлеры
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CallbackQueryHandler(button))
-application.add_handler(conv_handler)
+async def process_update(body):
+    """Асинхронная обработка обновления"""
+    try:
+        application = get_application()
+        update = Update.de_json(body, application.bot)
+        await application.process_update(update)
+        return {"statusCode": 200, "body": "OK"}
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"statusCode": 500, "body": f"Error: {str(e)}"}
 
 # Основная функция для Vercel
-async def handler(request):
+def handler(request):
+    """Главная функция-обработчик для Vercel"""
     try:
         # Получаем тело запроса
         if hasattr(request, 'get_json'):
-            body = await request.get_json()
+            body = request.get_json()
+        elif hasattr(request, 'json'):
+            body = request.json
         else:
-            body = json.loads(await request.body())
+            # Fallback для других форматов
+            import urllib.parse
+            if hasattr(request, 'body'):
+                body = json.loads(request.body)
+            else:
+                body = json.loads(request.data)
         
-        # Создаем Update объект
-        update = Update.de_json(body, application.bot)
+        # Запускаем асинхронную обработку
+        result = asyncio.run(process_update(body))
+        return result
         
-        # Обрабатываем обновление
-        await application.process_update(update)
-        
-        return {
-            "statusCode": 200,
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"status": "ok"})
-        }
     except Exception as e:
-        print(f"Error processing update: {e}")
+        print(f"Handler error: {e}")
         return {
             "statusCode": 500,
-            "headers": {"Content-Type": "application/json"},
             "body": json.dumps({"error": str(e)})
         }
 
-# Для совместимости с разными форматами Vercel
-def main(request):
-    import asyncio
-    return asyncio.run(handler(request))
+# Для совместимости с различными форматами Vercel
+def main(event, context=None):
+    """Альтернативная точка входа"""
+    return handler(event)
